@@ -170,9 +170,26 @@ export default function Employees() {
       setPage(1);
       const finalUrl=`http://localhost:3000/employees/query?${quotedUrl.join('&')}`;
       setFilterUrl(finalUrl);
-      const referenceString=`Search for- ${quotedUrl.join('&')}`;
-      //set key inlocal storage
-      localStorage.setItem("cxSearches", JSON.stringify({name: referenceString, url: `${filterUrl}&page=${page}`}));
+      //Set key in local storage-
+        const key = "cxSearches";
+        const newEntry = {
+          name: `Searched for- ${quotedUrl.join('&')}`,
+          url: `${finalUrl}&page=1`
+        };
+
+        const existingData = localStorage.getItem(key);
+
+        if (existingData) {
+          const parsedData = JSON.parse(existingData);
+          if (Array.isArray(parsedData)) {
+            parsedData.push(newEntry);
+            localStorage.setItem(key, JSON.stringify(parsedData));
+          } else {
+            localStorage.setItem(key, JSON.stringify([newEntry]));
+          }
+        } else {
+          localStorage.setItem(key, JSON.stringify([newEntry]));
+        }
     }
     else{
       setFilterUrl("");
@@ -205,7 +222,25 @@ export default function Employees() {
       //set flag to true to show search results
       setFlag(true);
         //Set key in local storage-
-        localStorage.setItem("cxSearches", JSON.stringify({name: debouncedValue, url: `http://localhost:3000/employees/query?searchValue=${debouncedValue}&page=${page}`}));
+        const key = "cxSearches";
+        const newEntry = {
+          name: debouncedValue,
+          url: `http://localhost:3000/employees/query?searchValue=${debouncedValue}&page=${page}`
+        };
+
+        const existingData = localStorage.getItem(key);
+
+        if (existingData) {
+          const parsedData = JSON.parse(existingData);
+          if (Array.isArray(parsedData)) {
+            parsedData.push(newEntry);
+            localStorage.setItem(key, JSON.stringify(parsedData));
+          } else {
+            localStorage.setItem(key, JSON.stringify([newEntry]));
+          }
+        } else {
+          localStorage.setItem(key, JSON.stringify([newEntry]));
+        }
       }
       else{
         setFlag(false);
