@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Drawer, List, ListItem, ListItemText } from '@mui/material';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
@@ -6,8 +6,13 @@ import ApartmentIcon from '@mui/icons-material/Apartment';
 import { Link } from 'react-router';
 
 export default function Header() {
+  const [open, setOpen]=useState(false);
+  const handleViewDrawer=()=>{
+    setOpen(true);
+  }
   return (
-    <header>
+    <>
+      <header>
       <div className='left_holder'>
         <img src='https://www.codelogicx.com/assets/images/logo.svg' width={150} />
       </div>
@@ -27,7 +32,7 @@ export default function Header() {
             </Link>
           </li>
           <li>
-            <Button>
+            <Button onClick={handleViewDrawer}>
               <AccountBalanceWalletIcon />
               Views
             </Button>
@@ -38,5 +43,9 @@ export default function Header() {
         </div>
       </div>
     </header>
+    <Drawer anchor='right' open={open} onClose={()=>{setOpen(false)}}>
+      <p>Hi</p>
+    </Drawer>
+    </>
   );
 }
