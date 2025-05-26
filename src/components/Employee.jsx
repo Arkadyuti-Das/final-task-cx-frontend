@@ -13,7 +13,7 @@ export default function Employees() {
   const [searchBarValue, setSearchbarValue]=useState("");
   const [debouncedValue, setDebouncedValue]=useState('');
 
-  const [ageValue, setAgeValue]=useState([20, 50]);
+  const [ageValue, setAgeValue]=useState([0, 0]);
   const [salaryValue, setSalaryValue]=useState([0, 0]);
 
   const [fieldValue, setFieldValue]=useState("");
@@ -22,11 +22,39 @@ export default function Employees() {
   const [selectedDepartments, setSelectedDepartments]=useState([]);
   const [departments, setDepartments]=useState([]);
 
+  //Set flag to see if filter or search was applied
+  const [flag, setFlag]=useState(false);
+
   useEffect(()=>{
-    fetch(`http://localhost:3000/employees?page=${page}`).then(res=>res.json()).then((data)=>{
+    if (flag===false){
+      console.log("Flag in else: ",flag);
+      fetch(`http://localhost:3000/employees?page=${page}`).then(res=>res.json()).then((data)=>{
       setData(data);
     });
+    }
   }, [page]);
+
+  useEffect(()=>{
+    //For search values only
+    if (flag && debouncedValue){
+      fetch(`http://localhost:3000/employees/query?searchValue=${debouncedValue}&page=${page}`).then((res)=>res.json()).then((data)=>{
+        setData(data.data);
+        setTotalPage(Math.ceil(data.totalCount/100));
+        setFlag(true);
+        console.log(data.data);
+      });
+    } 
+    else if(!debouncedValue){
+      fetch(`http://localhost:3000/employees?page=${page}`).then(res=>res.json()).then((data)=>{
+        setData(data);
+        setFlag(false);
+        fetch('http://localhost:3000/count-employees').then(res=>res.text()).then((data)=>{
+          setTotalPage(parseInt(data));
+        });
+      });
+
+    } 
+  }, [flag, page,debouncedValue])
 
   useEffect(()=>{
     fetch('http://localhost:3000/count-employees').then(res=>res.text()).then((data)=>{
@@ -62,11 +90,6 @@ export default function Employees() {
   useEffect(() => {
     if (debouncedValue) {
       console.log("Debounced Value:", debouncedValue);
-      // trigger API calls or filtering logic here
-      //Search by first name, last name
-      fetch(`http://localhost:3000/employees/query?searchValue=${debouncedValue}`).then((res)=>res.json()).then((data)=>{
-        //data as array from the query
-      });
     }
   }, [debouncedValue]);
 
@@ -102,10 +125,10 @@ export default function Employees() {
 
   //handle filter changes
   const handleApplyFilters=()=>{
-    //get the values of all filters
+    //get the values of all filters including the searched value also
     console.log("Age range: ", ageValue);
-    const ageStart=ageValue[0];
-    const ageEnd=ageValue[1];
+    const ageMin=ageValue[0];
+    const ageMax=ageValue[1];
     
     console.log("Salary range: ", salaryValue);
     const salaryStart=salaryValue[0];
@@ -123,13 +146,29 @@ export default function Employees() {
     console.log("Search box value: ", debouncedValue);
 
     //send request to this url
-    fetch(`/employees/query?searchValue=${debouncedValue}&ageStart=${ageStart}&ageEnd=${ageEnd}&salaryStart=${salaryStart}&salaryEnd=${salaryEnd}&sortField=${sortField}$sortBy=${sortBy}&departments=${queryString}`).then((res)=>res.json()).then((data)=>{
+    fetch(`/employees/query?searchValue=${debouncedValue}&ageMin=${ageStart}&ageMax=${ageEnd}&salaryStart=${salaryStart}&salaryEnd=${salaryEnd}&sortField=${sortField}$sortBy=${sortBy}&departments=${queryString}`).then((res)=>res.json()).then((data)=>{
       //data from api as array
+      //Set data
+      setData(data.data);
+      //Set pagination values
+      setPage(1);
+      setTotalPage(Math.ceil(data.totalCount/100));
+      setFlag(true);
+      //Save in local storage the name of the searched query
     });
   }
 
   const handlePageChange=(event, value)=>{
-    setPage(value);
+    if(flag){
+      setPage(value);
+      setFlag(true);
+      console.log("Inside handlepge in if flag: ", flag);
+    }
+    else{
+      setPage(value);
+      setFlag(false);
+      console.log("outside handlepge in if flag: ", flag);
+    }
   }
 
   const handleRowClick=(emp_number)=>{
@@ -138,8 +177,55 @@ export default function Employees() {
     setOpen(true);
   }
 
+  const handleSearch=()=>{
+      if (debouncedValue!="" ||debouncedValue!=null){
+        //set initial page to 1
+      setPage(1);
+      //set flag to true to show search results
+      setFlag(true);
+      }
+      else{
+        setFlag(false);
+      }
+      
+
+      // setTotalPage(Math.ceil(data.totalCount/100));
+      // console.log(totalPage);
+  }
+
   return (
     <>
+      {flag?<>
+        <Container sx={{my:'3rem'}}>
+          <Paper>
+          <TableContainer sx={{ maxHeight: 440 }}>
+            <Table stickyHeader aria-label="sticky table">
+              <TableHead>
+                    <TableRow>
+                      <TableCell>Employee Name</TableCell>
+                      <TableCell>Department</TableCell>
+                      <TableCell>Last Title</TableCell>
+                      <TableCell>Last Salary</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {data?.map((items)=>(
+                        <TableRow key={items.emp_no}
+                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }} onClick={()=>{handleRowClick(items.emp_no)}}>
+                            <TableCell align='left'>{items?.first_name} {items?.last_name}</TableCell>
+                            <TableCell align='left'>{items?.dept_emp?.department?.dept_name || '-'}</TableCell>
+                            <TableCell align='left'>{items?.titles[items.titles.length-1]?.title || '-'}</TableCell>
+                            <TableCell align='left'>{items?.salaries[items.salaries.length - 1]?.salary}</TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+          </TableContainer>
+          <Pagination count={totalPage} page={page} color='primary' onChange={handlePageChange} showFirstButton showLastButton/>
+        </Paper>
+        <EmployeeDrawer open={open} onClose={()=>{setOpen(false)}} employeeNumber={selectedEmployee} />
+        </Container>
+      </>:<>
         <Container sx={{my:'3rem'}}>
           <Paper>
           <TableContainer sx={{ maxHeight: 440 }}>
@@ -169,6 +255,7 @@ export default function Employees() {
         </Paper>
         <EmployeeDrawer open={open} onClose={()=>{setOpen(false)}} employeeNumber={selectedEmployee} />
         </Container>
+      </>}
         <Container
           sx={{
             my: '3rem',
@@ -270,6 +357,11 @@ export default function Employees() {
           <Box textAlign="right">
             <Button variant="contained" color="primary" onClick={handleApplyFilters}>
               Apply Filters
+            </Button>
+          </Box>
+          <Box textAlign="right">
+            <Button variant="contained" color="primary" onClick={handleSearch}>
+              Apply Search
             </Button>
           </Box>
         </Container>
